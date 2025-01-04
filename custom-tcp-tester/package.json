@@ -1,0 +1,17 @@
+{
+  "name": "custom-tcp-tester",
+  "description": "A custom TCP testing tool built with Node.js net module",
+  "scripts": {
+    "start": "yarn node tester.js",
+    "dev": "yarn nodemon tester.js"
+  },
+  "packageManager": "yarn@4.3.0",
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "author": "ssh00n",
+  "license": "ISC",
+  "dependencies": {
+    "yargs": "^17.7.2"
+  }
+}

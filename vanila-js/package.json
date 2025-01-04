@@ -1,0 +1,15 @@
+{
+  "name": "my-vanila-webserver",
+  "description": "A simple web server built with Vanila Javascript (Node.js)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "packageManager": "yarn@4.6.0",
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
