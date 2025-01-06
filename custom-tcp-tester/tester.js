@@ -1,9 +1,10 @@
 const net = require('net');
 const yargs = require('yargs');
+require('dotenv').config();
 
-// 서버 정보
-const HOST = '127.0.0.1';
-const PORT = 3000;
+const HOST = process.env.HOST || '127.0.0.1';
+const PORT = process.env.PORT || 3000;
+
 
 // args
 const argv = yargs
@@ -18,6 +19,12 @@ const argv = yargs
     description: 'Message to send',
     type: 'string',
     default: 'Hello from tester!\n'
+  })
+  .option('concurrency', {
+    alias: 'C',
+    description: 'Number of clients to run concurrently',
+    type: 'number',
+    default: 100
   })
   .help()
   .alias('help', 'h')
@@ -38,31 +45,37 @@ class Client {
         this.id = id;
         this.message = message;
         this.startTime = Date.now();
-        this.socket = net.createConnection({ host: HOST, port: PORT }, () => {
-            console.log(`Client ${this.id}: Connected to server`);
-            this.socket.write(this.message);
+        this.socket = null;
+    }
+
+    connect() {
+        return new Promise((resolve, reject) => {
+            this.socket = net.createConnection({ host: HOST, port: PORT }, () => {
+                console.log(`Client ${this.id}: Connected to server`);
+                this.socket.write(this.message);
+            });
+
+            this.socket.on('data', (data) => {
+                const responseTime = Date.now() - this.startTime;
+                console.log(`Client ${this.id}: Received: ${data.toString().trim()} (Response Time: ${responseTime}ms)`);
+
+                stats.successfulResponses += 1;
+                stats.totalResponseTime += responseTime;
+
+                this.socket.end();
+                resolve();
+            });
+
+            this.socket.on('end', () => {
+                console.log(`Client ${this.id}: Disconnected from server`);
+            })
+
+            this.socket.on('error', (err) => {
+                console.error(`Client ${this.id}: Connection error: `, err);
+                stats.failedResponses += 1;
+                resolve();
+            })
         })
-
-        this.socket.on('data', (data) => {
-            const responseTime = Date.now() - this.startTime;
-            console.log(`Client ${this.id}: Received: ${data.toString().trim()} (Response Time: ${responseTime}ms)`);
-
-            stats.successfulResponses += 1;
-            stats.totalResponseTime += responseTime;
-
-
-            this.socket.end();
-        })
-
-        this.socket.on('end', () => {
-            console.log(`Client ${this.id}: Disconnected from server`);
-        });
-
-        this.socket.on('error', (err) => {
-            console.error(`Client ${this.id}: Connection error: `, err);
-
-            stats.failedResponses += 1;
-        });
     }
 }
 
@@ -70,26 +83,63 @@ class Client {
 const NUM_CLIENTS = argv.clients;
 const MESSAGE = argv.message;
 
-// 클라이언트 배열
-const clients = [];
+const createClients = async (num, msg, concurrency) => {
+    const clientPromises = [];
+    let activeClients = 0;
+    let currentClient = 0;
 
-// 클라이언트 생성
-for (let i = 1; i <= NUM_CLIENTS; i++) {
-    stats.totalRequests += 1;
-    clients.push(new Client(i, `Client ${i}: ${MESSAGE}\n`));
+    return new Promise((resolve) => {
+        const launchNext = () => {
+            if (currentClient >= num) { 
+                if (activeClients === 0) {
+                    resolve();
+                }
+                return;
+            }
+
+            while (activeClients < concurrency && currentClient < num) { 
+                const id = currentClient + 1;
+                const client = new Client(id, `Client ${id}: ${msg}`);
+                stats.totalRequests += 1;
+                activeClients += 1;
+                currentClient += 1;
+
+                client.connect().then(() => {
+                    activeClients -= 1;
+                    launchNext();
+                })
+                .catch(() => {
+                    activeClients -= 1;
+                    launchNext();
+                });
+            }
+        };
+
+        launchNext();
+    })
 }
 
 
-// 모든 클라이언트 종료 확인 후 통계 출력
-const checkCompletion = setInterval(() => {
-    if (stats.successfulResponses + stats.failedResponses === stats.totalRequests) {
-        clearInterval(checkCompletion);
-        const avgResponseTime = stats.successfulResponses > 0 ? (stats.totalResponseTime / stats.successfulResponses) : 0;
-        console.log('\n=== Test Statistics ===');
-        console.log(`Total Requests: ${stats.totalRequests}`);
-        console.log(`Successful Responses: ${stats.successfulResponses}`);
-        console.log(`Failed Responses: ${stats.failedResponses}`);
-        console.log(`Total Response TIme: ${stats.totalResponseTime}`);
-        console.log(`Average Response Time: ${avgResponseTime}ms`);
-    }
-}, 1000)
+
+// 테스트 실행 함수
+const runTest = async () => {
+    console.log(`Starting test with ${argv.clients} clients, concurrency: ${argv.concurrency}, message: "${argv.message}"`);
+    
+    const startTestTime = Date.now();
+    
+    await createClients(argv.clients, argv.message, argv.concurrency);
+  
+    const totalTestTime = Date.now() - startTestTime;
+    const avgResponseTime = stats.successfulResponses > 0 ? (stats.totalResponseTime / stats.successfulResponses).toFixed(2) : 0;
+  
+    console.log('\n=== Test Statistics ===');
+    console.log(`Total Requests: ${stats.totalRequests}`);
+    console.log(`Successful Responses: ${stats.successfulResponses}`);
+    console.log(`Failed Responses: ${stats.failedResponses}`);
+    console.log(`Total Response Time: ${stats.totalResponseTime}ms`);
+    console.log(`Average Response Time: ${avgResponseTime}ms`);
+    console.log(`Total Test Time: ${totalTestTime}ms`);
+  };
+  
+  // 테스트 실행
+  runTest();

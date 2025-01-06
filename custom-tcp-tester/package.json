@@ -12,6 +12,7 @@
   "author": "ssh00n",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.4.7",
     "yargs": "^17.7.2"
   }
 }

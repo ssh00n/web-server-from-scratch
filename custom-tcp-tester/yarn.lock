@@ -248,6 +248,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "custom-tcp-tester@workspace:."
   dependencies:
+    dotenv: "npm:^16.4.7"
     nodemon: "npm:^3.1.9"
     yargs: "npm:^17.7.2"
   languageName: unknown
@@ -262,6 +263,13 @@ __metadata:
     supports-color:
       optional: true
   checksum: 10c0/db94f1a182bf886f57b4755f85b3a74c39b5114b9377b7ab375dc2cfa3454f09490cc6c30f829df3fc8042bc8b8995f6567ce5cd96f3bc3688bd24027197d9de
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^16.4.7":
+  version: 16.4.7
+  resolution: "dotenv@npm:16.4.7"
+  checksum: 10c0/be9f597e36a8daf834452daa1f4cc30e5375a5968f98f46d89b16b983c567398a330580c88395069a77473943c06b877d1ca25b4afafcdd6d4adb549e8293462
   languageName: node
   linkType: hard
 
